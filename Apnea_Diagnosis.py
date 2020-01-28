@@ -288,7 +288,7 @@ if option != 'Select one':
     AI_max, apnea_total, AI_hourly = apnea_diagnose(y_pred)
 
     st.header('Diagnosis result')
-    # plot_diagnosis_result(AI_max, apnea_total)
+    plot_diagnosis_result(AI_max, apnea_total)
 
     st.header('How is the diagnosis made?')
     st.subheader('1. Apnea is first diagnosed for each minute')
