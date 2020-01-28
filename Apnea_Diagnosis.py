@@ -30,13 +30,13 @@ def apnea_diagnose(y_pred):
 
 def plot_diagnosis_result(AI_max, apnea_total):
     if AI_max >= 10 and apnea_total >= 100:
-        img_path = 'resources/warning.png'
+        img_path = 'warning.png'
         text = 'Severe Apnea'
     elif AI_max >= 5 and apnea_total >= 5:
-        img_path = 'resources/attention.png'
+        img_path = 'attention.png'
         text = 'Moderate Apnea'
     else:
-        img_path = 'resources/good.png'
+        img_path = 'good.png'
         text = 'You are doing well!'
     img = mpimg.imread(img_path)
     plt.imshow(img)
@@ -111,7 +111,7 @@ def plot_apnea_block(fig, hour, s_min, e_min, color):
 
 def plot_hourly_AI(y_pred, AI_hourly):
     fig = go.Figure()
-    t_minute = np.arange(len(y_pred)) / 60
+    # t_minute = np.arange(len(y_pred)) / 60
     fig.add_trace(go.Scatter(
         x=np.arange(len(AI_hourly)) + 0.5, 
         y=AI_hourly,
