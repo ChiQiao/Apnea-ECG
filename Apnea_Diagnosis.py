@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import plotly.graph_objs as go
 import pickle
+import base64
 
 def load_model():
     with open('resources/logreg_time.pkl', 'rb') as f:
@@ -27,26 +28,79 @@ def apnea_diagnose(y_pred):
 
     return AI_max, apnea_total, AI_hourly
 
-
 def plot_diagnosis_result(AI_max, apnea_total):
     if AI_max >= 10 and apnea_total >= 100:
-        img_path = 'warning.png'
+        img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/warning.png'
         text = 'Severe Apnea'
     elif AI_max >= 5 and apnea_total >= 5:
-        img_path = 'attention.png'
+        img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/attention.png'
         text = 'Moderate Apnea'
     else:
-        img_path = 'good.png'
+        img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/good.png'
         text = 'You are doing well!'
-    img = mpimg.imread(img_path)
-    plt.imshow(img)
-    plt.text(2000, 750, text, 
-        verticalalignment='center', fontsize=30)
-    plt.xlim(0, 5000)
-    plt.tight_layout()
-    plt.axis('off')
-    st.pyplot()
 
+    # with open(img_path, "rb") as image_file:
+    #     encoded_string = base64.b64encode(image_file.read()).decode()
+    # # Add the prefix that plotly will want when using the string as source
+    # encoded_image = "data:image/png;base64," + encoded_string
+
+    fig = go.Figure()
+    fig.add_layout_image(
+        go.layout.Image(
+            source=img_path, #encoded_image,
+            xref="x",
+            yref="y",
+            x=0,
+            y=0,
+            sizex=1.5,
+            sizey=1.5,
+            xanchor='right',
+            yanchor='middle',
+            # sizing="stretch",
+            # opacity=0.5,
+            layer="above",
+        )
+    )
+    fig.update_layout(
+        xaxis = dict(
+            range=[-2, 3],
+            visible=False,
+        ),
+        yaxis = dict(
+            range=[-1, 1],
+            visible=False,
+        ),
+        showlegend=False,
+        annotations=[
+            go.layout.Annotation(
+                x=0.2,
+                y=0,
+                text=text,
+                font={'size': 30}, 
+                showarrow=False,
+                xanchor='left',
+                yanchor='middle',
+            ),
+        ],
+        height=200,
+        paper_bgcolor='white',
+        plot_bgcolor='white',
+        margin=go.layout.Margin(
+            b=0,
+            t=0,
+        ),
+    )
+    st.plotly_chart(fig)
+
+    # img = mpimg.imread(img_path)
+    # fig = plt.figure()
+    # plt.imshow(img)
+    # plt.text(2000, 750, text, 
+    #     verticalalignment='center', fontsize=30)
+    # plt.xlim(0, 5000)
+    # plt.tight_layout()
+    # plt.axis('off')
+    # st.pyplot(fig)
 
 def plot_hourly_apnea(y_pred):
     total_hour = np.ceil(len(y_pred) / 60)
@@ -83,17 +137,21 @@ def plot_hourly_apnea(y_pred):
             dtick=1,
             title='Hour'
         ),
-        title={
-            'text':'Apnea based on minutes', 
-            'x':0.5, 
-            'xanchor': 'center',
-            'y':0.85,
-            'yanchor': 'top',
-            },
+        # title={
+        #     'text':'Apnea based on minutes', 
+        #     'x':0.5, 
+        #     'xanchor': 'center',
+        #     'y':0.85,
+        #     'yanchor': 'top',
+        #     },
+        height=300,
+        margin=go.layout.Margin(
+            b=0,
+            t=10,
+        ),
         font={'size': 15},
     )
     st.plotly_chart(fig)
-
 
 def plot_apnea_block(fig, hour, s_min, e_min, color):
     fig.add_shape(go.layout.Shape(
@@ -108,6 +166,30 @@ def plot_apnea_block(fig, hour, s_min, e_min, color):
         line_width=0,
     ))
 
+def plot_hr(t_hr, hr):
+    fig = go.Figure()
+    fig.add_trace(go.Scatter(
+        x=t_hr, 
+        y=hr,
+    ))
+    fig.update_layout(
+        # title={
+        #     'text':'First minute of heart rate', 
+        #     'x':0.5, 
+        #     'xanchor': 'center',
+        #     'y':0.9,
+        #     'yanchor': 'top',
+        #     },
+        xaxis_title='Second',
+        yaxis_title='Heart rate (bps)',
+        font={'size': 15},
+        height=200,
+        margin=go.layout.Margin(
+            b=0,
+            t=10,
+        ),
+        )
+    st.plotly_chart(fig)    
 
 def plot_hourly_AI(y_pred, AI_hourly):
     fig = go.Figure()
@@ -130,13 +212,13 @@ def plot_hourly_AI(y_pred, AI_hourly):
     #     name='Non-apnea',
     # ))
     fig.update_layout(
-        title={
-            'text':'Apnea Index', 
-            'x':0.5, 
-            'xanchor': 'center',
-            'y':0.9,
-            'yanchor': 'top',
-            },
+        # title={
+        #     'text':'Apnea Index', 
+        #     'x':0.5, 
+        #     'xanchor': 'center',
+        #     'y':0.9,
+        #     'yanchor': 'top',
+        #     },
         xaxis_title='Hour',
         yaxis_title='Apnes Index',
         xaxis = dict(
@@ -149,12 +231,16 @@ def plot_hourly_AI(y_pred, AI_hourly):
         yaxis = dict(
             range=[0, AI_max * 1.2],
         ),
+        height=300,
+        margin=go.layout.Margin(
+            b=0,
+            t=10,
+        ),
         # showlegend=True,
         # legend=dict(x=0, y=1.12, orientation='h'),
         font={'size': 15},
     )
     st.plotly_chart(fig)
-
 
 def plot_apnea_diagnosis(AI_max, apnea_total):
     fig = go.Figure()
@@ -227,13 +313,13 @@ def plot_apnea_diagnosis(AI_max, apnea_total):
     y_ub = np.min([np.max([120, apnea_total * 1.8]), len(y_pred)])
     x_ub = np.min([np.max([12, AI_max * 1.8]), 60])
     fig.update_layout(
-        title={
-            'text':'OSA Diagnosis', 
-            'x':0.5, 
-            'xanchor': 'center',
-            'y':0.85,
-            'yanchor': 'top',
-            },
+        # title={
+        #     'text':'OSA Diagnosis', 
+        #     'x':0.5, 
+        #     'xanchor': 'center',
+        #     'y':0.85,
+        #     'yanchor': 'top',
+        #     },
         xaxis_title='Max. Apnea Index',
         yaxis_title='Total Apnea Minutes',
         xaxis = dict(
@@ -272,9 +358,15 @@ def plot_apnea_diagnosis(AI_max, apnea_total):
                 yanchor='bottom',
             ),
         ],
+        height=300,
+        margin=go.layout.Margin(
+            b=0,
+            t=10,
+        ),
         font={'size': 15},
     )
     st.plotly_chart(fig)
+
 
 st.title('Apnea prediction')
 
@@ -291,8 +383,19 @@ if option != 'Select one':
     plot_diagnosis_result(AI_max, apnea_total)
 
     st.header('How is the diagnosis made?')
+    
+    st.subheader('Usually this is what we need:')
+    st.markdown('* Electrocardiogram')
+    st.markdown('* lung and brain activities')
+    st.markdown('* breathing patterns')
+    st.markdown('* blood oxygen levels')
+
+    st.subheader('Predictions here, however, are based on the heart rate data you uploaded.')
+    plot_hr([0, 1, 2], [0, 1, 0])
+
     st.subheader('1. Apnea is first diagnosed for each minute')
     plot_hourly_apnea(y_pred)
+
 
     st.subheader('2. Apnea Index is calculated as minutes of Apnea per hour')
     plot_hourly_AI(y_pred, AI_hourly)
