@@ -1,3 +1,10 @@
+archive/
+data/
+features/
+image_HR/
+model/
+papers/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
