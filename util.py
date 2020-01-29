@@ -79,44 +79,6 @@ def get_normal_segment_idx(ecg, ratio_lb, ratio_ub, diagPlot):
     return idx_valid
 
 
-'''
-def extract_features(ecg, r_peaks, atfs, steps, diagPlot):
-    # Extract features from ecg data
-    #     fea = extract_features(ecg, r_peaks, atfs, steps)
-    # Output
-    #     fea: (fea_num * steps) vector, [features for step 1, features for step 2, ect.]
-    ecg_detrend = detrend_ecg(ecg)
-    r_idx = extract_r(ecg_detrend, fs)
-
-    t, v, ecg_new = extract_pqrst(ecg, r_idx, fs, diagPlot)
-    
-    # Rows to extract (based on R peak)
-    idx = np.argmin(np.abs(t[:, 2] - 30))
-    s_idx = idx - int(steps / 2)
-    e_idx = s_idx + steps
-    
-    # Features from single QRS
-    rt = np.diff(t, axis=1) # Time interval among PQRST peaks
-    rv = np.diff(v, axis=1) # Relative amplitude of PQRST peaks
-
-    dt = np.diff(t, axis=0) # R-R intervals, etc. 
-    dv = np.diff(v, asix=0) # Change in amplitude
-    drt = np.diff(rt, axis=0)
-    drv = np.diff(rv, axis=0)
-
-    ddt = np.diff(t, axis=0, n=2) # Derivative of R-R intervals, etc.
-    ddv = np.diff(v, axis=0, n=2) # Derivative of amplitude change
-    ddrt = np.diff(rt, axis=0, n=2)
-    ddrv = np.diff(rv, axis=0, n=2)
-
-    fea = np.hstack((
-        dt[s_idx : e_idx, 2], 
-        dv[s_idx : e_idx, 2], 
-        ddt[s_idx : e_idx, 2], 
-        ddv[s_idx : e_idx, 2],
-    ))
-    return fea.flatten()
-'''
 
 def get_heart_rate(ecg):
     # Calculate heart rate

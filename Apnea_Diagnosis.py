@@ -31,10 +31,12 @@ def apnea_diagnose(y_pred):
 def plot_diagnosis_result(AI_max, apnea_total):
     if AI_max >= 10 and apnea_total >= 100:
         img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/warning.png'
-        text = 'Severe Apnea'
+        text = 'Severe Apnea<br ><span style="font-size:0.6em;">Snoring is jeopardizing your health'\
+            '<br >Strongly recommend to see a doctor</span>'
     elif AI_max >= 5 and apnea_total >= 5:
         img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/attention.png'
-        text = 'Moderate Apnea'
+        text = 'Moderate Apnea<br ><span style="font-size:0.6em;">Snoring is becoming a problem'\
+            '<br >Recommend to see a doctor</span>'
     else:
         img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/good.png'
         text = 'You are doing well!'
@@ -80,6 +82,7 @@ def plot_diagnosis_result(AI_max, apnea_total):
                 showarrow=False,
                 xanchor='left',
                 yanchor='middle',
+                align="left",
             ),
         ],
         height=200,
@@ -126,16 +129,26 @@ def plot_hourly_apnea(y_pred):
             color = 'red' if data[s_idx] else 'lightgreen'
             plot_apnea_block(fig, hour, s_idx, e_idx+1, color)
 
+        # Plot separation lines
+        fig.add_trace(go.Scatter(
+            x=[0, 60],
+            y=[hour+0.5, hour+0.5],
+            mode='lines',
+            line={'color':'white'},
+        ))
+
     fig.update_layout(
         xaxis=dict(
             range=[0, 60],
-            title='Minute'
+            title='Minute',
+            showgrid=False,
         ),
         yaxis=dict(
-            range=[0, total_hour],
+            range=[total_hour+0.5, 0.5],
             tick0=1,
             dtick=1,
-            title='Hour'
+            title='Hour',
+            showgrid=False,
         ),
         # title={
         #     'text':'Apnea based on minutes', 
@@ -145,6 +158,7 @@ def plot_hourly_apnea(y_pred):
         #     'yanchor': 'top',
         #     },
         height=300,
+        showlegend=False,
         margin=go.layout.Margin(
             b=0,
             t=10,
@@ -157,9 +171,9 @@ def plot_apnea_block(fig, hour, s_min, e_min, color):
     fig.add_shape(go.layout.Shape(
         type="rect",
         x0=s_min,
-        y0=hour,
+        y0=hour+0.5,
         x1=e_min,
-        y1=hour+1,
+        y1=hour+1.5,
         fillcolor=color,
         opacity=0.5,
         layer="below",
@@ -393,7 +407,7 @@ if option != 'Select one':
     st.subheader('Predictions here, however, are based on the heart rate data you uploaded.')
     plot_hr([0, 1, 2], [0, 1, 0])
 
-    st.subheader('1. Apnea is first diagnosed for each minute')
+    st.subheader('1. Apnea is first diagnosed for each minute (red below)')
     plot_hourly_apnea(y_pred)
 
 
