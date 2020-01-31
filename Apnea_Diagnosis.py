@@ -413,9 +413,9 @@ if option != 'Select one':
     
     st.subheader('Usually this is what we need:')
     st.markdown('* Electrocardiogram')
-    st.markdown('* lung and brain activities')
-    st.markdown('* breathing patterns')
-    st.markdown('* blood oxygen levels')
+    st.markdown('* Lung and brain activities')
+    st.markdown('* Breathing patterns')
+    st.markdown('* Blood oxygen levels')
 
     st.subheader('Predictions here, however, are based on the heart rate data you uploaded.')
     with open('resources/HR_' + dict_data[option] + '.pkl', 'rb') as f:
@@ -423,13 +423,13 @@ if option != 'Select one':
     st.dataframe(pd.DataFrame(data['t'] * 60, columns=['Heart beat time (s)']))
     plot_hr(data['t'], data['hr'])
 
-    st.subheader('1. Apnea is first diagnosed for each minute (red below)')
+    st.subheader('1. Diagnose Apnea for each minute (red below)')
     plot_hourly_apnea(y_pred)
 
-    st.subheader('2. Apnea Index is calculated as minutes of Apnea per hour')
+    st.subheader('2. Calculate Apnea Index (minutes of Apnea per hour)')
     plot_hourly_AI(y_pred, AI_hourly)
 
-    st.subheader('3. Final diagnosis is based on max Apnea Index and total minutes of Apnea')
+    st.subheader('3. Determine severity of Apnea')
     plot_apnea_diagnosis(AI_max, apnea_total)
 
 
