@@ -360,7 +360,7 @@ def plot_apnea_diagnosis(AI_max, apnea_total):
             go.layout.Annotation(
                 x=0,
                 y=0,
-                text="Safe",
+                text="Normal",
                 font={'size': 17}, 
                 showarrow=False,
                 xanchor='left',
@@ -369,7 +369,7 @@ def plot_apnea_diagnosis(AI_max, apnea_total):
             go.layout.Annotation(
                 x=5,
                 y=5,
-                text="Attention<br>Needed",
+                text="Moderate<br>Apnea",
                 font={'size': 17}, 
                 showarrow=False,
                 xanchor='left',
@@ -378,7 +378,7 @@ def plot_apnea_diagnosis(AI_max, apnea_total):
             go.layout.Annotation(
                 x=10,
                 y=100,
-                text="Treatment<br>Needed",
+                text="Severe<br>Apnea",
                 font={'size': 17}, 
                 showarrow=False,
                 xanchor='left',
