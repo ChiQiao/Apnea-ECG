@@ -7,10 +7,12 @@ import plotly.graph_objs as go
 import pickle
 import base64
 
-def load_model():
-    with open('resources/logreg_time.pkl', 'rb') as f:
+def load_model(test_file):
+    with open('resources/model_logreg.pkl', 'rb') as f:
         res = pickle.load(f)
-    return res
+    test_df = pd.read_csv('resources/feature_' + test_file + '.csv')
+    test_df.drop(['apn', 'group', 'file'], axis=1, inplace=True)
+    return res, test_df
 
 def apnea_diagnose(y_pred):
     # Total minute
@@ -126,7 +128,12 @@ def plot_hourly_apnea(y_pred):
 
         # Plot blocks
         for s_idx, e_idx in zip(s_idx, e_idx):
-            color = 'red' if data[s_idx] else 'lightgreen'
+            if data[s_idx] == 1:
+                color = 'red'
+            elif data[s_idx] == 2:
+                color = 'grey'
+            else:
+                color = 'lightgreen'
             plot_apnea_block(fig, hour, s_idx, e_idx+1, color)
 
         # Plot separation lines
@@ -194,8 +201,14 @@ def plot_hr(t_hr, hr):
         #     'y':0.9,
         #     'yanchor': 'top',
         #     },
-        xaxis_title='Second',
-        yaxis_title='Heart rate (bps)',
+        xaxis=dict(
+            range=[0, 2.5],
+            title='Minute',
+        ),
+        yaxis=dict(
+            range=[0, 2],
+            title='Heart rate (bps)',
+        ),
         font={'size': 15},
         height=200,
         margin=go.layout.Margin(
@@ -386,11 +399,11 @@ st.title('Apnea prediction')
 
 option = st.selectbox(
     'Sample ECG recording', ('Select one', 'Normal', 'Moderate Apnea', 'Severe Apnea'))
-dict_data = {'Normal': 'X_C', 'Moderate Apnea': 'X_B', 'Severe Apnea': 'X_A'}
+dict_data = {'Normal': 'c06', 'Moderate Apnea': 'x03', 'Severe Apnea': 'x05'}
 
 if option != 'Select one':
-    res = load_model()
-    y_pred = res['mdl'].predict(res[dict_data[option]])
+    mdl, data = load_model(dict_data[option])
+    y_pred = mdl['mdl'].predict(mdl['scaler'].transform(data))
     AI_max, apnea_total, AI_hourly = apnea_diagnose(y_pred)
 
     st.header('Diagnosis result')
@@ -405,11 +418,13 @@ if option != 'Select one':
     st.markdown('* blood oxygen levels')
 
     st.subheader('Predictions here, however, are based on the heart rate data you uploaded.')
-    plot_hr([0, 1, 2], [0, 1, 0])
+    with open('resources/HR_' + dict_data[option] + '.pkl', 'rb') as f:
+        data = pickle.load(f)
+    st.dataframe(pd.DataFrame(data['t'] * 60, columns=['Heart beat time (s)']))
+    plot_hr(data['t'], data['hr'])
 
     st.subheader('1. Apnea is first diagnosed for each minute (red below)')
     plot_hourly_apnea(y_pred)
-
 
     st.subheader('2. Apnea Index is calculated as minutes of Apnea per hour')
     plot_hourly_AI(y_pred, AI_hourly)
