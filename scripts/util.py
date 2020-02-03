@@ -3,7 +3,6 @@ from scipy import interp
 import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.graph_objects as go
-import biosppy.signals.ecg as ECG
 from sklearn import preprocessing
 from sklearn.base import clone
 from sklearn.model_selection import StratifiedKFold
@@ -223,6 +222,8 @@ def get_heart_rate(ecg):
 
 
 def extract_r(ecg_detrend, fs):
+    import biosppy.signals.ecg as ECG
+
     r_idx = list(ECG.christov_segmenter(ecg_detrend, fs))[0] # Works fine in most cases
     # Assuming HR = 1 bps, check if half of the R peaks are detected
     if len(r_idx) < (len(ecg_detrend) / fs) / 2:
