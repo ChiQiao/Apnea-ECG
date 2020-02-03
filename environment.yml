@@ -1,0 +1,25 @@
+name: apnea-ecg
+channels:
+- defaults
+- conda-forge
+dependencies:
+- python=3.8
+- pip
+- jupyter
+- conda
+- scipy
+- pandas
+- numpy
+- matplotlib
+- seaborn
+- plotly
+- pip:
+  - autopep8
+  - pylint
+  - rope
+  - jupyter_contrib_nbextensions
+  - scikit-learn
+  - wfdb
+  - biosppy
+  - librosa
+  - streamlit

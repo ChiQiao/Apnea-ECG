@@ -1,1 +1,1 @@
-web: streamlit run Apnea_Diagnosis.py --server.port $PORT --browser.serverAddress https://apnea-ecg.herokuapp.com
+web: streamlit run scripts/Apnea_Diagnosis.py --server.port $PORT --browser.serverAddress https://apnea-ecg.herokuapp.com
