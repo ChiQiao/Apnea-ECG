@@ -277,9 +277,12 @@ def plot_hourly_AI(y_pred, AI_hourly):
 
 st.title('Sleep Apnea Evaluation')
 
+st.header('Heart rate data')
 option = st.selectbox(
-    'Sample ECG recording', ('Select one', 'Normal', 'Moderate Apnea', 'Severe Apnea'))
+    'Select a sample', ('Select one', 'Normal', 'Moderate Apnea', 'Severe Apnea'))
 dict_data = {'Normal': 'c06', 'Moderate Apnea': 'x03', 'Severe Apnea': 'x05'}
+
+st.file_uploader('Or upload your own heart rate data (time of heart beat in minutes, single column csv file)', type='csv')
 
 if option != 'Select one':
     mdl, data = load_model(dict_data[option])
