@@ -7,14 +7,19 @@ import pickle
 import plotly.graph_objs as go
 import streamlit as st
 
-import plot
+from scripts import plot
 
-def load_model(test_file):
-    with open('../resources/model_logreg.pkl', 'rb') as f:
+def load_model():
+    with open('resources/model_logreg.pkl', 'rb') as f:
         res = pickle.load(f)
-    test_df = pd.read_csv('../resources/feature_' + test_file + '.csv')
+    return res
+
+
+def load_sample_data(test_file):
+    test_df = pd.read_csv('resources/feature_' + test_file + '.csv')
     test_df.drop(['apn', 'group', 'file'], axis=1, inplace=True)
-    return res, test_df
+    return test_df
+
 
 def apnea_diagnose(y_pred):
     # Total minute
@@ -285,7 +290,10 @@ dict_data = {'Normal': 'c06', 'Moderate Apnea': 'x03', 'Severe Apnea': 'x05'}
 st.file_uploader('Or upload your own heart rate data (time of heart beat in minutes, single column csv file)', type='csv')
 
 if option != 'Select one':
-    mdl, data = load_model(dict_data[option])
+    mdl = load_model()
+    data = load_sample_data(dict_data[option])
+
+
     y_pred = mdl['mdl'].predict(mdl['scaler'].transform(data))
     AI_max, apnea_total, AI_hourly = apnea_diagnose(y_pred)
 
@@ -301,7 +309,7 @@ if option != 'Select one':
     st.markdown('* Blood oxygen levels')
 
     st.subheader('Predictions here, however, are based on the heart rate data you uploaded.')
-    with open('../resources/HR_' + dict_data[option] + '.pkl', 'rb') as f:
+    with open('resources/HR_' + dict_data[option] + '.pkl', 'rb') as f:
         data = pickle.load(f)
     # st.dataframe(pd.DataFrame(data['t'] * 60, columns=['Heart beat time (s)']))
     plot_hr(data['t'], data['hr'])
