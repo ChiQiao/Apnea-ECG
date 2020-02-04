@@ -42,15 +42,15 @@ def plot_raw_qrs_ann(ecg, r_peaks, atfs):
 
 def plot_diagnosis_result(AI_max, apnea_total):
     if AI_max >= 10 and apnea_total >= 100:
-        img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/warning.png'
+        img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_warning.png'
         text = 'Severe Apnea<br ><span style="font-size:0.6em;">Snoring is jeopardizing your health'\
             '<br >Strongly recommend a sleep study</span>'
     elif AI_max >= 5 and apnea_total >= 5:
-        img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/attention.png'
+        img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_attention.png'
         text = 'Moderate Apnea<br ><span style="font-size:0.6em;">Snoring is becoming a problem'\
             '<br >Recommend a sleep study</span>'
     else:
-        img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/good.png'
+        img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_good.png'
         text = 'You are doing well!'
 
     # with open(img_path, "rb") as image_file:

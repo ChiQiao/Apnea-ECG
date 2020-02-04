@@ -13,6 +13,7 @@ dependencies:
 - matplotlib
 - seaborn
 - plotly
+- lightgbm
 - pip:
   - autopep8
   - pylint

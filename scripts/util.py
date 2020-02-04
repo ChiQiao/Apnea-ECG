@@ -1,8 +1,9 @@
-import numpy as np
-from scipy import interp
-import pandas as pd
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+import pickle
 import plotly.graph_objects as go
+from scipy import interp, signal
 from sklearn import preprocessing
 from sklearn.base import clone
 from sklearn.model_selection import StratifiedKFold
@@ -12,6 +13,89 @@ from sklearn import metrics
 
 
 fs = 100
+
+
+def smooth_hr(t_hr, hr):
+    b, a = signal.butter(3, 0.1)
+
+    # Remove outliers 
+    idx_valid = (hr < 2) & (hr > 0.5)
+    hr, t_hr = hr[idx_valid], t_hr[idx_valid]
+    
+    # Filter out high-frequency noise
+    hr_smth = signal.filtfilt(b, a, hr)
+    
+    # Remove outliers again
+    idx_valid = (hr < hr_smth + 0.2) & (hr > hr_smth - 0.2)
+    hr, t_hr = hr[idx_valid], t_hr[idx_valid]
+    
+    # Filter out high-frequency noise
+    hr_smth = signal.filtfilt(b, a, hr)
+
+    return t_hr, hr_smth
+
+def get_cwt(file, fs_new=1, smooth=True, cwt_width=100, return_segments=False, segment_window=3, diagPlot=False, xlm=[0, 10]):
+    # Input
+    # segment_window: Window size in minutes to associate with labels
+    # xlm: Xlim for diagnostic plot in minutes
+    
+    with open('../HR_data/' + file + '.pkl', 'rb') as f:
+        data = pickle.load(f)
+        apn = data['apn']
+        group = file[0].upper() 
+
+    hr_raw, t_raw = data['hr'], data['t']
+
+    # Smooth data
+    if smooth:
+        t_raw, hr_raw = smooth_hr(t_raw, hr_raw)
+
+    # Resample data for frequency-domain analysis
+    t = np.arange(t_raw[0], t_raw[-1], 1 / fs_new / 60)
+    hr = np.interp(t, t_raw, hr_raw)
+
+    widths = np.arange(1, cwt_width + 1)
+    cwt = signal.cwt(hr, signal.ricker, widths)
+    
+    # Diagnose plot
+    if diagPlot:
+        plt.figure(figsize=(20,10))
+        # Time history plot
+        # fig.add_subplot(2, 1, 2)
+        plt.subplot(212, position=[0.05, 0.05, 0.9, 0.45])
+        plt.plot(t, hr)
+        plt.xlim(xlm)
+        plt.ylabel('Time series', size=30)
+        plt.xlabel('Minute', size=30)
+        plt.tick_params(labelsize=30)
+
+        # Wavelet plot
+        plt.subplot(211, position=[0.05, 0.5, 0.9, 0.45])
+        plt.imshow(cwt, cmap='gray', aspect='auto', origin='lower', vmin=-2, vmax=2,)
+        for minute in range(len(apn)):
+            sym = 'r-' if apn[minute] else 'g-'
+            plt.plot(np.array([minute, minute+1]) * 60 * fs_new, [0, 0], sym, linewidth=20)
+
+        plt.xlim(np.array(xlm) * 60 * fs_new)
+        plt.ylabel('Wavelet', size=30)
+        plt.xticks([])
+        plt.tick_params(labelsize=30)
+        plt.show()
+    
+    if return_segments:
+        half_window = int(segment_window / 2)
+        seg_cwtmatr = []
+        # Skip first and last 2-minute data to eliminate boundary effects of CWT
+        for idx in range(2 + half_window, len(apn) - half_window):
+            minute_start = idx - half_window
+            idx_start = int(minute_start * 60 * fs_new)
+            seg_cwtmatr.append(cwt[:, idx_start : int(idx_start + segment_window * 60 * fs_new)])
+        
+        cwt = seg_cwtmatr
+        apn = apn[2 + half_window : len(apn) - half_window]
+        
+    return cwt, apn, group
+
 
 def feature_select(mdl, df, train_df, feature_col, n=4):
     # Baseline accuracy
