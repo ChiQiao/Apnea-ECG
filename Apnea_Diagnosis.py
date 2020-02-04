@@ -64,13 +64,6 @@ if uploaded_file is not None:
     show_result = True
 
 if show_result:
-    # st.header('How is the diagnosis made?')
-    # st.subheader('Usually this is what we need:')
-    # st.markdown('* Electrocardiogram')
-    # st.markdown('* Lung and brain activities')
-    # st.markdown('* Breathing patterns')
-    # st.markdown('* Blood oxygen levels')
-
     with open(f'resources/{dict_data[option]}.pkl', 'rb') as f:
         data = pickle.load(f)
     y_pred = mdl['mdl'].predict(mdl['scaler'].transform(features_df))
@@ -87,13 +80,4 @@ if show_result:
     st.plotly_chart(plot.plot_apnea_diagnosis(AI_max, apnea_total, y_pred))
     st.plotly_chart(plot.plot_diagnosis_result(AI_max, apnea_total))
 
-    # st.subheader('1. Diagnose Apnea for each minute (red below)')
-    # st.plotly_chart(plot.plot_hourly_apnea(y_pred))
-
-    # st.subheader('2. Calculate Apnea Index (minutes of Apnea per hour)')
-    # fig = plot_hourly_AI(y_pred, AI_hourly)
-    # st.plotly_chart(fig)
-
-    # st.subheader('3. Determine severity of Apnea')
-
-
+    st.markdown('<font size="4">Curious how the machine learning model works? Check out [here](https://drive.google.com/open?id=1lmE1tm9eHBhCa1_bnkR_sSzINox4kxgn)!</font>', unsafe_allow_html=True)
