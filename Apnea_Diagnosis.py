@@ -37,7 +37,7 @@ def apnea_diagnose(y_pred):
     return AI_max, apnea_total
 
 mdl = load_model()
-dict_data = {'Normal': 'c06', 'Moderate Apnea': 'x03', 'Severe Apnea': 'x05'}
+dict_data = {'Sample 1': 'c20', 'Sample 2': 'b05', 'Sample 3': 'a04'}
 show_result = False
 
 st.title('Sleep Apnea Evaluation')
@@ -45,7 +45,7 @@ st.title('Sleep Apnea Evaluation')
 st.header('Heart rate data')
 a = st.empty()
 b = st.empty()
-options = ('Select one', 'Normal', 'Moderate Apnea', 'Severe Apnea')
+options = ('Select one', 'Sample 1', 'Sample 2', 'Sample 3')
 text_upload = 'Or upload your own heart rate data (Format: time of heart beat in minutes, single column csv file)'
 
 option = a.selectbox('From a sample', options)
@@ -71,7 +71,7 @@ if show_result:
     # st.markdown('* Breathing patterns')
     # st.markdown('* Blood oxygen levels')
 
-    with open('resources/HR_' + dict_data[option] + '.pkl', 'rb') as f:
+    with open(f'resources/{dict_data[option]}.pkl', 'rb') as f:
         data = pickle.load(f)
     y_pred = mdl['mdl'].predict(mdl['scaler'].transform(features_df))
     AI_max, apnea_total = apnea_diagnose(y_pred)

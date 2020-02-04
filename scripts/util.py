@@ -72,9 +72,9 @@ def get_cwt(file, fs_new=1, smooth=True, cwt_width=100, return_segments=False, s
         # Wavelet plot
         plt.subplot(211, position=[0.05, 0.5, 0.9, 0.45])
         plt.imshow(cwt, cmap='gray', aspect='auto', origin='lower', vmin=-2, vmax=2,)
-        for minute in range(len(apn)):
-            sym = 'r-' if apn[minute] else 'g-'
-            plt.plot(np.array([minute, minute+1]) * 60 * fs_new, [0, 0], sym, linewidth=20)
+        # for minute in range(len(apn)):
+        #     sym = 'r-' if apn[minute] else 'g-'
+        #     plt.plot(np.array([minute, minute+1]) * 60 * fs_new, [0, 0], sym, linewidth=20) 
 
         plt.xlim(np.array(xlm) * 60 * fs_new)
         plt.ylabel('Wavelet', size=30)
