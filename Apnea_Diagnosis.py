@@ -8,15 +8,18 @@ import plotly.graph_objs as go
 import streamlit as st
 
 from scripts import plot
+from scripts.util import extract_features
 
 def load_model():
     with open('resources/model_logreg.pkl', 'rb') as f:
         res = pickle.load(f)
-    return res
+    with open('features/feature_selection.pkl', 'rb') as f:
+        feature_col = pickle.load(f)
+    return res['mdl'], res['scaler'], feature_col
 
 
 def load_sample_features(test_file):
-    test_df = pd.read_csv('resources/feature_' + test_file + '.csv')
+    test_df = pd.read_csv('features/' + test_file + '.csv')
     test_df.drop(['apn', 'group', 'file'], axis=1, inplace=True)
     return test_df
 
@@ -36,48 +39,84 @@ def apnea_diagnose(y_pred):
     AI_max = AI_hourly.max()
     return AI_max, apnea_total
 
-mdl = load_model()
-dict_data = {'Sample 1': 'c20', 'Sample 2': 'b05', 'Sample 3': 'a04'}
+
+def check_data(data):
+    duration = (data[-1] - data[0]) / 60
+    if duration > 12 or duration < 4:
+        st.warning(
+            'A typical recording of heart rate should be around 8 hours. ' +\
+            'Please make sure the heart rate data is in minutes.')
+        return False
+    return True
+
+
+mdl, scaler, feature_col = load_model()
 show_result = False
 
 st.title('Sleep Apnea Evaluation')
+st.markdown(
+    '''
+    <font size="4">[Sleep Apnea](https://en.wikipedia.org/wiki/Sleep_apnea)
+    affects more than 18 million Americans. It causes hypertension, heart disease and 
+    memory problems in the long term. <br /><br />Before spending $2,000 and a whole night 
+    for a sleep study, you can try this app, which detects Sleep Apnea with over 80% 
+    accuracy just based on your heart rate during the sleep! <br /><br />
+    Curious about how the machine learning model works? Check out [here]
+    (https://docs.google.com/presentation/d/1WwZyvJ4VLjRcUPeKftsnVOTlXbZ1NYcIuLxvsKsN9ew/edit?usp=sharing)!<br />
+    _(Self-evaluation only. Please confirm with your health care provider)_</font>
+    ''',
+    unsafe_allow_html=True)
 
-st.header('Heart rate data')
-a = st.empty()
-b = st.empty()
-options = ('Select one', 'Sample 1', 'Sample 2', 'Sample 3')
-text_upload = 'Or upload your own heart rate data (Format: time of heart beat in minutes, single column csv file)'
+st.header('Upload your heart rate data')
+from_sample = st.checkbox('Just show me some samples')
+a = st.empty() # Place holder to be either file uploader or selectbox
 
-option = a.selectbox('From a sample', options)
-uploaded_file = b.file_uploader(text_upload, type='csv')
+if from_sample:
+    options = ('Select one', 'Sample 1', 'Sample 2', 'Sample 3')
+    option = a.selectbox('or use the sample data', options)
+    if option != 'Select one':
+        dict_data = {'Sample 1': 'c04', 'Sample 2': 'b09', 'Sample 3': 'a12'}
+        # Load features
+        features_df = load_sample_features(dict_data[option])
+        # Load heart rate data
+        with open(f'HR_data/{dict_data[option]}.pkl', 'rb') as f:
+            hr_data = pickle.load(f)
+        show_result = True
 
-if option != 'Select one':
-    features_df = load_sample_features(dict_data[option])
-    # a.empty()
-    # b.empty()
-    show_result = True
-
-if uploaded_file is not None:
-    data = pd.read_csv(uploaded_file)
-    # a.empty()
-    # b.empty()
-    show_result = True
+else:
+    uploaded_file = a.file_uploader(
+        'format requirement: time of each heart beat in minutes, ' +\
+        'starting from 0, single column csv file', type='csv')
+    if uploaded_file is not None:
+        t_hr = np.loadtxt(uploaded_file)
+        show_result = check_data(t_hr)
+        if show_result:
+            with st.spinner('Extracting features...'):
+                hr = 1 / (np.diff(t_hr * 60))
+                t_hr = t_hr[1: ]
+                hr_data = {'t': t_hr, 'hr': hr}
+                features_df = extract_features(hr_data)
 
 if show_result:
-    with open(f'resources/{dict_data[option]}.pkl', 'rb') as f:
-        data = pickle.load(f)
-    y_pred = mdl['mdl'].predict(mdl['scaler'].transform(features_df))
+    # Make prediction
+    y_pred = mdl.predict(scaler.transform(features_df[feature_col]))
     AI_max, apnea_total = apnea_diagnose(y_pred)
 
     st.header('')
     st.header('Minute-wise evaluation')
-    st.subheader('based on the heart rate data you uploaded')
-    st.plotly_chart(plot.plot_hr(data['t'], data['hr'], y_pred))
+    st.markdown('''
+        <font size="4">Apnea is first evluated for each minute based on the heart rate.</font>
+        ''', unsafe_allow_html=True)
+    st.plotly_chart(plot.plot_hr(hr_data['t'], hr_data['hr'], y_pred))
 
     st.header('')
     st.header('Severity diagnosis')
-    st.subheader('according to max[apnea minutes per hour] and total apnea minutes')
-    st.plotly_chart(plot.plot_apnea_diagnosis(AI_max, apnea_total, y_pred))
-    st.plotly_chart(plot.plot_diagnosis_result(AI_max, apnea_total))
+    st.markdown('''
+        <font size="4">The severity is determined by: <br />1) the highest Apnea Index (apnea minutes per hour), and 
+        <br />2) total minutes of apnea during the sleep.</font>
+        ''', unsafe_allow_html=True)
+    st.plotly_chart(plot.plot_apnea_diagnosis(AI_max, apnea_total, y_pred), config={'displayModeBar': False})
+    st.plotly_chart(plot.plot_diagnosis_result(AI_max, apnea_total), config={'displayModeBar': False})
 
-    st.markdown('<font size="4">Curious how the machine learning model works? Check out [here](https://drive.google.com/open?id=1lmE1tm9eHBhCa1_bnkR_sSzINox4kxgn)!</font>', unsafe_allow_html=True)
+    st.markdown('<font size="4"></font>',
+         unsafe_allow_html=True)

@@ -24,3 +24,4 @@ dependencies:
   - biosppy
   - librosa
   - streamlit
+  - hrv-analysis

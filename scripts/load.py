@@ -1,11 +1,12 @@
 import wfdb
 import numpy as np
+from pathlib import Path
 
 def single_file_res(data_folder, file, apn, t_end):
     apn = apn[1: -1]  # Remove first and last APN label
 
     # ECG data (ecg)
-    ecg, _ = get_ecg(data_folder + file)
+    ecg, _ = get_ecg(str(Path(data_folder) / file))
     ecg = np.array(ecg).flatten()
     assert len(ecg) >= t_end * 100, 'Period of ecg shorter than label'
     ecg = ecg[: int(t_end * 100)]  # Discard the tail
@@ -13,7 +14,7 @@ def single_file_res(data_folder, file, apn, t_end):
     ecg = ecg[3000: -3000].reshape(len(apn), 6000)
 
     # QRS label
-    qrs, _, t_qrs = get_qrs(data_folder + file)
+    qrs, _, t_qrs = get_qrs(str(Path(data_folder) / file))
     qrs = np.array(qrs)
     qrs = qrs[t_qrs <= t_end]
     t_qrs = t_qrs[t_qrs <= t_end]

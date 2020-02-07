@@ -44,11 +44,11 @@ def plot_diagnosis_result(AI_max, apnea_total):
     if AI_max >= 10 and apnea_total >= 100:
         img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_warning.png'
         text = 'Severe Apnea<br ><span style="font-size:0.6em;">Snoring is jeopardizing your health'\
-            '<br >Strongly recommend a sleep study</span>'
+            '<br >Sleep study strongly recommend</span>'
     elif AI_max >= 5 and apnea_total >= 5:
         img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_attention.png'
         text = 'Moderate Apnea<br ><span style="font-size:0.6em;">Snoring is becoming a problem'\
-            '<br >Recommend a sleep study</span>'
+            '<br >Sleep study recommended</span>'
     else:
         img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_good.png'
         text = 'You are doing well!'
@@ -247,7 +247,7 @@ def plot_hr(t_hr, hr, y_pred):
         height=200,
         margin=go.layout.Margin(
             b=0,
-            t=10,
+            t=30,
         ),
     )
     return fig
@@ -383,7 +383,7 @@ def plot_apnea_diagnosis(AI_max, apnea_total, y_pred):
     y_ub = np.min([np.max([120, apnea_total * 1.8]), len(y_pred)])
     x_ub = np.min([np.max([12, AI_max * 1.8]), 60])
     fig.update_layout(
-        xaxis_title='Max [apnea minutes per hour]',
+        xaxis_title='Apnea Index',
         yaxis_title='Total apnea minutes',
         xaxis = dict(
             range=[0, x_ub],
@@ -401,5 +401,4 @@ def plot_apnea_diagnosis(AI_max, apnea_total, y_pred):
         ),
         font={'size': 15},
     )
-
     return fig

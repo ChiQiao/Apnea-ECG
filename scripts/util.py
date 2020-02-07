@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import pickle
 import plotly.graph_objects as go
+from hrvanalysis import get_time_domain_features, get_csi_cvi_features
 from scipy import interp, signal
 from sklearn import preprocessing
 from sklearn.base import clone
@@ -13,6 +14,97 @@ from sklearn import metrics
 
 
 fs = 100
+
+
+def extract_features(data):
+    fs_new = 2.4 # optimized from hyper-parameter tuning
+    thres = 0.015
+    df = pd.DataFrame()
+
+    t_hr, hr = data['t'], data['hr']
+    t_hr, hr_smth = smooth_hr(t_hr, hr)
+    total_minute = int(t_hr[-1] - t_hr[0])
+    
+    # Resample data for frequency-domain analysis
+    t_interp = np.arange(t_hr[0], t_hr[-1], 1 / fs_new / 60)
+    hr_interp = np.interp(t_interp, t_hr, hr_smth)
+
+    # Extract features from each segment
+    for minute in range(total_minute - 4):
+        fea_dict = {}
+        idx_1min = (t_hr > minute + 2) & (t_hr < minute + 3)
+        idx_5min = (t_hr > minute) & (t_hr < minute + 5)
+        data_1min, data_5min = hr_smth[idx_1min], hr_smth[idx_5min]
+
+        hr_interp_1min = hr_interp[(t_interp > minute + 2) & (t_interp < minute + 3)]
+        hr_interp_5min = hr_interp[(t_interp > minute) & (t_interp < minute + 5)]
+
+        # Discard segment if less than 30 heart beats detected
+        if len(data_1min) < 30: 
+            continue
+
+        # Time-domain features for data_1min
+        md = np.median(data_1min)
+        fea_dict.update({
+            'md_1min': md,
+            'min_r_1min': data_1min.min() - md,
+            'max_r_1min': data_1min.max() - md,
+            'p25_r_1min': np.percentile(data_1min, 0.25) - md,
+            'p75_r_1min': np.percentile(data_1min, 0.75) - md,
+            'mean_r_1min': data_1min.mean() - md,
+            'std_1min': data_1min.std(),
+            'acf1_1min': pd.Series(hr_interp_1min).autocorr(12),
+            'acf2_1min': pd.Series(hr_interp_1min).autocorr(24),
+        })
+
+        # Time-domain features for data_5min
+        md = np.median(data_5min)
+        fea_dict.update({
+            'md_5min': md,
+            'min_r_5min': data_5min.min() - md,
+            'max_r_5min': data_5min.max() - md,
+            'p25_r_5min': np.percentile(data_5min, 0.25) - md,
+            'p75_r_5min': np.percentile(data_5min, 0.75) - md,
+            'mean_r_5min': data_5min.mean() - md,
+            'std_5min': data_5min.std(),
+            'acf1_5min': pd.Series(hr_interp_5min).autocorr(12),
+            'acf2_5min': pd.Series(hr_interp_5min).autocorr(24),
+        })
+
+        # Heart rate variability for data_1min
+        nn_intervals = (np.diff(t_hr[idx_1min]) * 1000 * 60).astype(int) # Unit in ms
+        time_domain_features = get_time_domain_features(nn_intervals)
+        time_domain_features = {f'{key}_1min': value for key, value in time_domain_features.items()}
+        nonlinear_features = get_csi_cvi_features(nn_intervals)
+        nonlinear_features = {f'{key}_1min': value for key, value in nonlinear_features.items()}
+        fea_dict.update(time_domain_features)
+        fea_dict.update(nonlinear_features)
+
+        # Heart rate variability for data_5min
+        nn_intervals = (np.diff(t_hr[idx_5min]) * 1000 * 60).astype(int) # Unit in ms
+        time_domain_features = get_time_domain_features(nn_intervals)
+        time_domain_features = {f'{key}_5min': value for key, value in time_domain_features.items()}
+        nonlinear_features = get_csi_cvi_features(nn_intervals)
+        nonlinear_features = {f'{key}_5min': value for key, value in nonlinear_features.items()}
+        fea_dict.update(time_domain_features)
+        fea_dict.update(nonlinear_features)
+
+        # Frequency-domain features
+        freqs, psd = signal.periodogram(hr_interp_5min, fs=fs_new)
+        psd[freqs > 0.1] = 0
+        fea_dict.update({
+            'peak': psd.max(),
+            'f_peak': freqs[np.argmax(psd)],
+            'area_total': psd.sum(),
+            'area_lf': psd[freqs < thres].sum(),
+            'area_hf': psd[freqs > thres].sum(),
+            'area_ratio': psd[freqs > thres].sum() / psd[freqs < thres].sum(),
+        })
+
+        df = df.append(fea_dict, ignore_index=True)
+
+    df.dropna(inplace=True)
+    return df
 
 
 def smooth_hr(t_hr, hr):
@@ -134,55 +226,67 @@ def feature_select(mdl, df, train_df, feature_col, n=4):
     return features
 
 
-def model_evaluation_CV(mdl, df, train_df, feature_col, n=5,
-    normalize=True, detail_pred=False, plot_roc=False):
+def model_evaluation_CV(mdl, df, file_df, feature_col, n=4, normalize=True, plot_roc=False):
     # Evaluate model accuracy using Stratified K-fold CV
     # Note: Stratification is based on patient group (A, B, C), and then samples are formed
-    skf = StratifiedKFold(n_splits=n)
-    acc_train, acc_val = [], []
-
-    if detail_pred:
-        patient_pred = train_df.copy(deep=True).set_index('file')
-        patient_pred.rename(columns={'group': 'true'}, inplace=True)
-        seg_pred = {}
-
+    
+    # Initialize
+    auc_val = []
+    group_res = file_df.copy(deep=True).set_index('file')
+    group_res.rename(columns={'group': 'true'}, inplace=True)
+    minute_res = {}
     if plot_roc:
         tprs, aucs = [], []
         mean_fpr = np.linspace(0, 1, 100)
         _, ax = plt.subplots()
-    
-    for idx_train, idx_val in skf.split(train_df, train_df['group']):
-        file_train, file_val = train_df.loc[idx_train, 'file'], train_df.loc[idx_val, 'file']
+
+    skf = StratifiedKFold(n_splits=n)
+    for idx_train, idx_val in skf.split(file_df, file_df['group']):
+        file_train, file_val = file_df.loc[idx_train, 'file'], file_df.loc[idx_val, 'file']
         X_train, y_train = df.loc[df.file.isin(file_train), feature_col], df.loc[df.file.isin(file_train), 'apn']
         X_val, y_val = df.loc[df.file.isin(file_val), feature_col], df.loc[df.file.isin(file_val), 'apn']
-        
+
         if normalize:
             scaler = preprocessing.StandardScaler().fit(X_train)
             X_train = scaler.transform(X_train)
             X_val = scaler.transform(X_val)
 
         mdl.fit(X_train, y_train)
-        acc_train.append(metrics.accuracy_score(y_train, mdl.predict(X_train)))
-        acc_val.append(metrics.accuracy_score(y_val, mdl.predict(X_val)))
-        
+        auc_val.append(metrics.roc_auc_score(y_val, mdl.predict_proba(X_val)[:, 1]))
+
         if plot_roc:
-            viz = metrics.plot_roc_curve(mdl, X_val, y_val,
-                                alpha=0.3, lw=1, ax=ax)
+            viz = metrics.plot_roc_curve(mdl, X_val, y_val, alpha=0.3, lw=1, ax=ax)
             interp_tpr = interp(mean_fpr, viz.fpr, viz.tpr)
             interp_tpr[0] = 0.0
             tprs.append(interp_tpr)
             aucs.append(viz.roc_auc)
-            
+
         # Accuracy for group diagnosis
-        if detail_pred:
-            for file in file_val:
-                X_val, y_val = df.loc[df.file.isin([file]), feature_col], df.loc[df.file.isin([file]), 'apn']
-                X_val = scaler.transform(X_val) if normalize else X_val
-                y_pred = mdl.predict(X_val)
-                y_pred_prob = mdl.predict_proba(X_val)
-                patient_pred.loc[file,'pred']=ecg_diagnose(y_pred)
-                seg_pred[file] = np.vstack((y_val, y_pred, y_pred_prob[:, 1]))
+        for file in file_val:
+            X_val, y_val = df.loc[df.file.isin([file]), feature_col], df.loc[df.file.isin([file]), 'apn']
+            X_val = scaler.transform(X_val) if normalize else X_val
+            # Group prediction
+            y_pred = mdl.predict(X_val)
+            group_res.loc[file,'pred'] = ecg_diagnose(y_pred)
+            group_res.loc[file,'true'] = ecg_diagnose(y_val.values) # Original group might be wrong (a10 is identified as B)
+            # Minute-wise prediction probability
+            y_pred_prob = mdl.predict_proba(X_val)
+            minute_res[file] = np.vstack((y_val, y_pred_prob[:, 1]))
+
+    minute_auc = np.mean(auc_val)
+    group_auc_macro, group_f1_best, thres_best, multiclass_auc = eval_multiclass_auc(group_res, minute_res)
     
+    res = {
+        'minute_auc_mean': minute_auc, 
+        'minute_auc_cv': auc_val,
+        'group_auc': group_auc_macro, 
+        'group_f1_best': group_f1_best, 
+        'thres_best': thres_best, 
+        'minute_detail': minute_res,
+        'group_detail': group_res,
+        'multiclass_auc': multiclass_auc,
+    }
+
     if plot_roc:        
         ax.plot([0, 1], [0, 1], linestyle='--', lw=2, color='r',
                 label='Chance', alpha=.8)
@@ -205,16 +309,87 @@ def model_evaluation_CV(mdl, df, train_df, feature_col, n=5,
         ax.legend(loc="lower right")
         plt.show()
 
-    res_detail = {}
-    if detail_pred:
-        res_detail['patient_pred'] = patient_pred
-        res_detail['seg_pred'] = seg_pred
-    if plot_roc:
-        res_detail['mean_fpr'] = mean_fpr
-        res_detail['mean_tpr'] = mean_tpr
-        res_detail['mean_auc'] = mean_auc
+        res['mean_fpr_minute'] = mean_fpr
+        res['mean_tpr_minute'] = mean_tpr
+        res['mean_auc_minute'] = mean_auc
+
+    return res
+
+
+def model_evaluation_test(mdl, df, file_df, feature_col, scaler, thres):
+    # Evaluate model accuracy using Stratified K-fold CV
+    # Note: Stratification is based on patient group (A, B, C), and then samples are formed
     
-    return np.mean(acc_train), np.mean(acc_val), res_detail
+    # Initialize
+    group_res = file_df.copy(deep=True).set_index('file')
+    group_res.rename(columns={'group': 'true'}, inplace=True)
+    minute_res = {}
+
+    # Normalize df
+    df_norm = pd.DataFrame(scaler.transform(df[feature_col]), columns=feature_col)
+    df = df_norm.join(df[['apn', 'file', 'group']])
+
+    # Overall AUC
+    minute_auc = metrics.roc_auc_score(df['apn'], mdl.predict_proba(df[feature_col])[:, 1])
+
+    # Accuracy for group diagnosis
+    for file in file_df['file']:
+        X, y = df.loc[df.file.isin([file]), feature_col], df.loc[df.file.isin([file]), 'apn']
+        # Group prediction
+        y_pred = (mdl.predict_proba(X)[:, 1] > thres).astype(int)
+        group_res.loc[file,'pred'] = ecg_diagnose(y_pred)
+        group_res.loc[file,'true'] = ecg_diagnose(y.values) # Original group might be wrong (a10 is identified as B)
+        minute_res[file] = np.vstack((y, y_pred))
+
+    res_detail = {
+        'group_res': group_res,
+        'minute_auc': minute_auc, 
+        'minute_detail': minute_res,
+        'group_detail': group_res,
+        # 'group_auc': group_auc_macro, 
+        # 'group_f1_best': group_f1_best, 
+        # 'thres_best': thres_best, 
+        # 'multiclass_auc': multiclass_auc,
+    }
+
+    return res_detail
+
+
+def eval_multiclass_auc(group_res, minute_res):
+    multiclass_auc = {
+        'fpr_A': [], 'tpr_A': [], 
+        'fpr_B': [], 'tpr_B': [], 
+        'fpr_C': [], 'tpr_C': [],
+        'f1_macro': [],
+    }
+    group_true = group_res['true'].values
+    
+    # AUC
+    thres_all = np.linspace(0, 1, 101)
+    for thres in thres_all:
+        group_pred = np.array([ecg_diagnose(minute_res[patient][1, :] > thres) for patient in group_res.index])
+        multiclass_auc['f1_macro'].append(metrics.f1_score(group_true, group_pred, average='macro'))
+        for group in list('ABC'):
+            temp_true = group_true == group
+            temp_pred = group_pred == group
+
+            # calculate tpr & fpr
+            tn, fp, fn, tp = metrics.confusion_matrix(temp_true, temp_pred).ravel()
+            fpr = fp / (tn + fp)
+            tpr = tp / (tp + fn)
+
+            multiclass_auc['fpr_' + group].append(fpr)
+            multiclass_auc['tpr_' + group].append(tpr)
+            
+    # Macro avg. of AUC for class A & C (B does not form intact ROC curve)
+    f1_macro_opt = np.max(multiclass_auc['f1_macro'])
+    thres_opt = thres_all[np.argmax(multiclass_auc['f1_macro'])]
+    auc_macro = np.mean([
+        metrics.auc(multiclass_auc['fpr_A'], multiclass_auc['tpr_A']),
+        metrics.auc(multiclass_auc['fpr_C'], multiclass_auc['tpr_C'])
+    ])
+    
+    return auc_macro, f1_macro_opt, thres_opt, multiclass_auc    
 
 
 def train_test_sample_split(df, X_label, y_label):
@@ -244,9 +419,9 @@ def ecg_diagnose(apn):
     AI_hourly = y_pred_hourly.sum(axis=1)
     # If data in the last hour exceed 30 minutes, then convert to hourly result
     y_pred_left = apn[total_hour * 60 : ]
-    if len(y_pred_left) >= 30:
-        AI_hourly = np.append(AI_hourly, sum(y_pred_left) * 60 / len(y_pred_left))
-        total_hour += 1
+    # if len(y_pred_left) >= 30:
+    #     AI_hourly = np.append(AI_hourly, sum(y_pred_left) * 60 / len(y_pred_left))
+    #     total_hour += 1
     AI_max = AI_hourly.max()
 
     if AI_max >= 10 and apnea_total >= 100:
