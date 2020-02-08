@@ -73,9 +73,9 @@ a = st.empty() # Place holder to be either file uploader or selectbox
 
 if from_sample:
     options = ('Select one', 'Sample 1', 'Sample 2', 'Sample 3')
-    option = a.selectbox('or use the sample data', options)
+    option = a.selectbox('', options)
     if option != 'Select one':
-        dict_data = {'Sample 1': 'c04', 'Sample 2': 'b09', 'Sample 3': 'a12'}
+        dict_data = {'Sample 1': 'c18', 'Sample 2': 'b09', 'Sample 3': 'a12'}
         # Load features
         features_df = load_sample_features(dict_data[option])
         # Load heart rate data
