@@ -1,11 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
-# import util
 
-fs = 100
-
-
-def plot_raw_qrs_ann(ecg, r_peaks, atfs):
+def plot_raw_qrs_ann(ecg, r_peaks, atfs, fs=100):
     # Plot original QRS annotation
     t = np.arange(len(ecg)) / fs
     fig = go.Figure()
@@ -17,34 +13,12 @@ def plot_raw_qrs_ann(ecg, r_peaks, atfs):
     fig.show()
 
 
-# def plot_hr_apn(res, minute_start, minute_end):
-#     # Plot heart rate with color indicating apn
-#     fig = go.Figure()
-#     for minute in range(minute_start, minute_end):
-#         t_hr, hr = util.get_heart_rate(res['ecg'][minute].flatten())
-#         color = 'red' if res['apn'][minute] else 'green'
-#         t_hr = t_hr / 60 + minute # Convert to minute
-#         fig.add_trace(go.Scatter(
-#             x=t_hr, 
-#             y=hr,
-#             mode='lines',
-#             line={'color':color, 'width':1}
-#         ))
-
-#     fig.update_layout(
-#         xaxis_title="Minute",
-#         yaxis_title="Heart Rate (bps)",
-#         showlegend=False,
-#     )
-#     fig.show()
-#     return fig
-
-
 def plot_diagnosis_result(AI_max, apnea_total):
+    # Plot diagnosis result and recommendation
     if AI_max >= 10 and apnea_total >= 100:
         img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_warning.png'
         text = 'Severe Apnea<br ><span style="font-size:0.6em;">Snoring is jeopardizing your health'\
-            '<br >Sleep study strongly recommend</span>'
+            '<br >Sleep study strongly recommended</span>'
     elif AI_max >= 5 and apnea_total >= 5:
         img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_attention.png'
         text = 'Moderate Apnea<br ><span style="font-size:0.6em;">Snoring is becoming a problem'\
@@ -52,11 +26,6 @@ def plot_diagnosis_result(AI_max, apnea_total):
     else:
         img_path = 'https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_good.png'
         text = 'You are doing well!'
-
-    # with open(img_path, "rb") as image_file:
-    #     encoded_string = base64.b64encode(image_file.read()).decode()
-    # # Add the prefix that plotly will want when using the string as source
-    # encoded_image = "data:image/png;base64," + encoded_string
 
     fig = go.Figure()
     fig.add_layout_image(
@@ -109,6 +78,7 @@ def plot_diagnosis_result(AI_max, apnea_total):
 
 
 def plot_hourly_apnea(y_pred):
+    # Plot grid (one row for one hour) indicating apnea (red) and non-apnea (green)
     total_hour = np.ceil(len(y_pred) / 60)
     y_segs = np.hstack((y_pred, 2 * np.ones(int(total_hour * 60 - len(y_pred)))))
     y_segs = y_segs.reshape(int(total_hour), 60)
@@ -158,13 +128,6 @@ def plot_hourly_apnea(y_pred):
             title='Hour',
             showgrid=False,
         ),
-        # title={
-        #     'text':'Apnea based on minutes', 
-        #     'x':0.5, 
-        #     'xanchor': 'center',
-        #     'y':0.85,
-        #     'yanchor': 'top',
-        #     },
         height=300,
         showlegend=False,
         margin=go.layout.Margin(
@@ -191,6 +154,7 @@ def plot_apnea_block(fig, hour, s_min, e_min, color):
 
 
 def plot_hr(t_hr, hr, y_pred):
+    # Plot heart rate time history with red indicating apnea 
     fig = go.Figure()
 
     # Find starting and ending index for each chunck of result (apnea or non-apnea)
@@ -202,13 +166,6 @@ def plot_hr(t_hr, hr, y_pred):
             minute_start.append(i)
 
     minute_end.append(len(y_pred) - 1)
-
-    # fig.add_trace(go.Scatter(
-    #     x=[-1 / 60, 0], 
-    #     y=[-1, -1],
-    #     line={'color': 'green'},
-    #     name='Non-apnea'
-    # ))
 
     # Plot segments
     neg_legend, pos_legend = True, False
@@ -254,33 +211,14 @@ def plot_hr(t_hr, hr, y_pred):
 
 
 def plot_hourly_AI(y_pred, AI_hourly, AI_max):
+    # Plot time history of Apnea Index
     fig = go.Figure()
-    # t_minute = np.arange(len(y_pred)) / 60
     fig.add_trace(go.Scatter(
         x=np.arange(len(AI_hourly)) + 0.5, 
         y=AI_hourly,
         name='Apnea Index',
     ))
-    # fig.add_trace(go.Bar(
-    #     x=t_minute[y_pred==1], 
-    #     y=np.ones(t_minute[y_pred==1].shape) * AI_max / 10,
-    #     width=1/60,
-    #     name='Apnea'
-    # ))
-    # fig.add_trace(go.Bar(
-    #     x=t_minute[y_pred==0], 
-    #     y=np.ones(t_minute[y_pred==0].shape) * AI_max / 10,
-    #     width=1/60,
-    #     name='Non-apnea',
-    # ))
     fig.update_layout(
-        # title={
-        #     'text':'Apnea Index', 
-        #     'x':0.5, 
-        #     'xanchor': 'center',
-        #     'y':0.9,
-        #     'yanchor': 'top',
-        #     },
         xaxis_title='Hour',
         yaxis_title='Apnes Index',
         xaxis = dict(
@@ -306,6 +244,7 @@ def plot_hourly_AI(y_pred, AI_hourly, AI_max):
 
 
 def plot_apnea_diagnosis(AI_max, apnea_total, y_pred):
+    # Plot diagnosis of apnea severity
     fig = go.Figure()
     fig.add_shape(go.layout.Shape(
         type="rect",

@@ -1,3 +1,4 @@
 {
-    "python.pythonPath": "C:\\Users\\joey3\\Anaconda3\\envs\\apnea-ecg\\python.exe"
+    "python.pythonPath": "C:\\Users\\joey3\\Anaconda3\\envs\\apnea-ecg\\python.exe",
+    "python.linting.enabled": false
 }

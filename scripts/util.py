@@ -12,13 +12,23 @@ from sklearn.feature_selection import RFE
 from sklearn.linear_model import LogisticRegression
 from sklearn import metrics
 
-
-fs = 100
-
-
 def extract_features(data):
+    ''' Extract features from heart rate data
+
+        Parameters
+        ----------
+        data: dict with key t and hr
+            data['t'] contains a numpy array indicating time in minutes
+            data['hr'] contains a numpy array with the same size of data['t'] 
+                indicating heart rate in beats per second
+        
+        Returns
+        -------
+        df: pandas DataFrame
+            Features in time and frequency domains for each minute
+    '''
     fs_new = 2.4 # optimized from hyper-parameter tuning
-    thres = 0.015
+    thres = 0.015 # optimized from hyper-parameter tuning
     df = pd.DataFrame()
 
     t_hr, hr = data['t'], data['hr']
@@ -108,6 +118,22 @@ def extract_features(data):
 
 
 def smooth_hr(t_hr, hr):
+    ''' Remove outliers and smooth heart rate data
+
+        Parameters
+        ----------
+        t_hr: numpy array
+            Time of heart rate data in minutes, same size as hr
+        hr: numpy array
+            Heart rate data in beats per second
+
+        Returns
+        -------
+        t_hr: numpy array
+            A subset of the input t_hr with outliers removed
+        hr_smth: numpy array
+            Smoothed heart rate with the same size of t_hr
+    '''
     b, a = signal.butter(3, 0.1)
 
     # Remove outliers 
@@ -127,10 +153,39 @@ def smooth_hr(t_hr, hr):
     return t_hr, hr_smth
 
 def get_cwt(file, fs_new=1, smooth=True, cwt_width=100, return_segments=False, segment_window=3, diagPlot=False, xlm=[0, 10]):
-    # Input
-    # segment_window: Window size in minutes to associate with labels
-    # xlm: Xlim for diagnostic plot in minutes
-    
+    ''' Generate Wavelet spectrogram
+
+        Parameters
+        ----------
+        file: str
+            Name of the pkl file in the HR_data folder
+        fs_new: double
+            Resampling frequency
+        smooth: boolean
+            Whether to smooth data before wavelet transformation
+        cwt_width: int
+            Width parameter for the scipy.signal.cwt function
+        return_segments: boolean
+            Whether to return cwt and apn in segments with window size determined by segment_window
+        segment_window: int
+            Window size in minutes to associate with labels
+            Odd number required
+            Only used when return_segments=True
+        diagPlot: boolean
+            Whether to generate diagnostic plots
+        xlm: list
+            X axis limit for diagnostic plot in minutes, [x_lowerbound, x_upperbound]
+            Only used when diagPlot=True
+
+        Returns
+        -------
+        cwt: numpy 2D array if return_segments=False, list of numpy 2D array if return_segments=True
+            Wavelet transformation
+        apn: numpy array
+            Apnea label for each minute
+        group: str
+            Severity group of the file (determined directly from file name)
+    '''
     with open('../HR_data/' + file + '.pkl', 'rb') as f:
         data = pickle.load(f)
         apn = data['apn']
@@ -165,8 +220,8 @@ def get_cwt(file, fs_new=1, smooth=True, cwt_width=100, return_segments=False, s
         plt.subplot(211, position=[0.05, 0.5, 0.9, 0.45])
         plt.imshow(cwt, cmap='gray', aspect='auto', origin='lower', vmin=-2, vmax=2,)
         # for minute in range(len(apn)):
-        #     sym = 'r-' if apn[minute] else 'g-'
-        #     plt.plot(np.array([minute, minute+1]) * 60 * fs_new, [0, 0], sym, linewidth=20) 
+            sym = 'r-' if apn[minute] else 'g-'
+            plt.plot(np.array([minute, minute+1]) * 60 * fs_new, [0, 0], sym, linewidth=20) 
 
         plt.xlim(np.array(xlm) * 60 * fs_new)
         plt.ylabel('Wavelet', size=30)
@@ -190,6 +245,28 @@ def get_cwt(file, fs_new=1, smooth=True, cwt_width=100, return_segments=False, s
 
 
 def feature_select(mdl, df, train_df, feature_col, n=4):
+    ''' Select features iteratively
+        Ranke feature importance, and test cross validation result by eliminating the least important feature
+        Stops when accuracy no longer improves after trying each feature
+
+        Parameters
+        ----------
+        mdl: sklearn model
+        df: DataFrame
+            Column 'apn' as target
+        train_df: DataFrame
+            For stratified train-test split
+            Contains column 'file' and 'group'
+        features_col: list
+            Features used for model training
+        n: int
+            K-fold cross validation
+
+        Returns
+        -------
+        features: list
+            Selected features
+    '''
     # Baseline accuracy
     _, acc_base, _ = model_evaluation_CV(clone(mdl), df, train_df, feature_col, n=n)
     print(f'Baseline accuracy: {acc_base:.3f}')
@@ -227,9 +304,42 @@ def feature_select(mdl, df, train_df, feature_col, n=4):
 
 
 def model_evaluation_CV(mdl, df, file_df, feature_col, n=4, normalize=True, plot_roc=False):
-    # Evaluate model accuracy using Stratified K-fold CV
-    # Note: Stratification is based on patient group (A, B, C), and then samples are formed
-    
+    ''' Evaluate model accuracy using Stratified K-fold CV
+        Split training dataset according to patient group
+
+        Parameters
+        ----------
+        mdl: sklearn model
+        df: DataFrame
+            Column 'apn' as target
+        file_df: DataFrame
+            For stratified cross validation
+            Contains column 'file' and 'group'
+        feature_col: list
+            Features for model training
+        n: int
+            K-fold cross validation
+        normalize: boolean
+            Whether to standardize features during model training
+        plot_roc: boolean
+            Whetehr to generate ROC curve for each fold
+
+        Returns
+        -------
+        res: dict includes the following keys
+            minute_auc_mean: Mean AUC of minute-wise prediction
+            minute_auc_cv: Detailed AUC of minute-wise prediction for each fold
+            group_auc: Macro mean of group-wise AUC (for group A & C only)
+            group_f1_best: highest macro F1 score (group A, B, and C) for group-wise prediction 
+            thres_best: Corresponding threshold for group_f1_best
+            minute_detail: dict recording minitue-wise prediction for each patient
+            group_detail: DataFrame recording group-wise prediction
+            multiclass_auc: dict recording TPR and FPR of group-wise prediction
+        When plot_roc=True, additional values are included:
+            mean_fpr_minute: Mean false positive rate for minute-wise prediction
+            mean_tpr_minute: Mean true positive rate for minute-wise prediction
+            mean_auc_minute: AUC from mean_fpr_minute and mean_tpr_minute
+    '''
     # Initialize
     auc_val = []
     group_res = file_df.copy(deep=True).set_index('file')
@@ -317,6 +427,32 @@ def model_evaluation_CV(mdl, df, file_df, feature_col, n=4, normalize=True, plot
 
 
 def model_evaluation_test(mdl, df, file_df, feature_col, scaler, thres):
+    ''' Evaluate model accuracy on testing data
+        
+        Parameters
+        ----------
+        mdl: sklearn model
+            Trained model
+        df: DataFrame
+            Features of the testing dataset
+            Column 'apn' as target
+        file_df: DataFrame
+            For recording group-wise prediction
+        feature_col: list
+            Features for model prediction
+        scaler: sklearn scaler
+            For standardize features
+        thres: double
+            Between 0 and 1, threshold for minute-wise prediction
+
+        Returns
+        -------
+        res: dict includes the following keys
+            group_res: DataFrame recording group-wise prediction
+            minute_auc: AUC of the minute-wise prediction
+            minute_detail: dict recording minitue-wise prediction for each patient
+            group_detail: DataFrame recording group-wise prediction
+    '''
     # Evaluate model accuracy using Stratified K-fold CV
     # Note: Stratification is based on patient group (A, B, C), and then samples are formed
     
@@ -346,16 +482,34 @@ def model_evaluation_test(mdl, df, file_df, feature_col, scaler, thres):
         'minute_auc': minute_auc, 
         'minute_detail': minute_res,
         'group_detail': group_res,
-        # 'group_auc': group_auc_macro, 
-        # 'group_f1_best': group_f1_best, 
-        # 'thres_best': thres_best, 
-        # 'multiclass_auc': multiclass_auc,
     }
 
     return res_detail
 
 
 def eval_multiclass_auc(group_res, minute_res):
+    ''' Calculate multiclass ROC
+
+        Parameters
+        ----------
+        group_res: DataFrame
+            Group-wise prediction result
+        minute_res: dict
+            Minute-wise prediction for each patient
+            Value of each key is a numpy array, with the first row as the true label, 
+            and the second row as the prediction probability
+
+        Returns
+        -------
+        auc_macro: scalar
+            Macro mean of AUC from the ROC curve of group A & C
+        f1_macro_opt: scalar
+            Optimal macro averaged F1 score for group A, B and C
+        thres_opt: scalar
+            Corresponding threshold for f1_macro_opt
+        multiclass_auc: dict 
+            Detailed ROC curves for each group and macro F1
+    '''
     multiclass_auc = {
         'fpr_A': [], 'tpr_A': [], 
         'fpr_B': [], 'tpr_B': [], 
@@ -392,24 +546,18 @@ def eval_multiclass_auc(group_res, minute_res):
     return auc_macro, f1_macro_opt, thres_opt, multiclass_auc    
 
 
-def train_test_sample_split(df, X_label, y_label):
-    file_train = pd.read_csv('resources/File_train.csv')
-    file_test = pd.read_csv('resources/File_test.csv')
-    file_samp = pd.read_csv('resources/File_sample.csv')
-
-    X_train = df[df.file.isin(file_train.file)][X_label]
-    y_train = df[df.file.isin(file_train.file)][y_label]
-    X_test = df[df.file.isin(file_test.file)][X_label]
-    y_test = df[df.file.isin(file_test.file)][y_label]
-
-    res = {}
-    res['X_A'] = df[df.file.isin(file_samp[file_samp.group.isin(['A'])].file)][X_label]
-    res['X_B'] = df[df.file.isin(file_samp[file_samp.group.isin(['B'])].file)][X_label]
-    res['X_C'] = df[df.file.isin(file_samp[file_samp.group.isin(['C'])].file)][X_label]
-
-    return X_train, X_test, y_train, y_test, res
-
 def ecg_diagnose(apn):
+    ''' Diagnose severity of sleep apnea
+
+        Parameters
+        ----------
+        apn: list
+            Apnea label for each minute
+
+        Returns
+        -------
+        Severity group
+    '''
     # Total minutes of apnea
     apnea_total = sum(apn)
 
@@ -432,23 +580,31 @@ def ecg_diagnose(apn):
         return 'C'
 
 
-def get_nonoutlier_idx(data, m=2.):
-    # Find non-outliers
-    #   idx_valid = get_nonoutlier_idx(data, m)
-    d = np.abs(data - np.median(data))
-    mdev = np.median(d)
-    s = d / (mdev if mdev else 1.)
-    idx_valid = s < m
-    return idx_valid
-
-
-def detrend_data(data, window_size=200):
+def __detrend_data(data, window_size=200):
     weights = np.ones(window_size) / window_size
     ecg_trend = np.convolve(data, weights, mode='same')
     return data - ecg_trend
 
 
-def get_normal_segment_idx(ecg, ratio_lb, ratio_ub, diagPlot):
+def get_normal_segment_idx(ecg, ratio_lb, ratio_ub, diagPlot=False):
+    ''' Detect abnormal ecg recording segments
+
+        Parameters
+        ----------
+        ecg: numpy 2D array
+            ECG recording for each minute
+        ratio_lb: scalar
+            Lower bound of segment standard deviation normalized by overall median
+        ratio_ub: scalar
+            Upper bound of segment standard deviation normalized by overall median
+        diagPlot: boolean
+            Whether to generate diagnostic plot
+
+        Returns
+        -------
+        idx_valid: numpy array of boolean
+            Indicates valid rows of ecg
+    '''
     ecg_sd = ecg.std(axis=1)
     ecg_sd_med = np.median(ecg_sd)
     idx_valid = (ecg_sd < ecg_sd_med * ratio_ub) & (ecg_sd > ecg_sd_med * ratio_lb)
@@ -465,24 +621,44 @@ def get_normal_segment_idx(ecg, ratio_lb, ratio_ub, diagPlot):
     return idx_valid
 
 
+def get_heart_rate(ecg, fs=100):
+    ''' Calculate heart rate
 
-def get_heart_rate(ecg):
-    # Calculate heart rate
-    #   t, hr = get_heart_rate(ecg)
-    # Output
-    #   t: Time in second
-    #   hr: Heart rate corresponding to t, unit in bps
+        Parameters
+        ----------
+        ecg: numpy 2D array
+        fs: scalar, sampling frequency
 
-    ecg_detrend = detrend_data(ecg)
+        Returns
+        -------
+        t: numpy array
+            Time of heart rate
+        hr: numpy array
+            Heart rate in beats per second, with the same size as t
+    '''
+    ecg_detrend = __detrend_data(ecg)
     r_idx = extract_r(ecg_detrend, fs)
     t = r_idx[1: ] / fs
     hr = 1 / (np.diff(r_idx) / fs)
     return t, hr
 
 
-def extract_r(ecg_detrend, fs):
-    import biosppy.signals.ecg as ECG
+def extract_r(ecg_detrend, fs=100):
+    ''' Extract R peaks from ECG data 
+        ECG data should have the length around 1 minute to get a stable result
 
+        Parameters
+        ----------
+        ecg_detrend: numpy array or list
+            Detrended ECG data 
+        fs: scalar
+            Sampling frequency of ecg_detrend
+
+        Returns
+        -------
+        r_idx: Index of R peaks for ecg_detrend
+    '''
+    import biosppy.signals.ecg as ECG
     r_idx = list(ECG.christov_segmenter(ecg_detrend, fs))[0] # Works fine in most cases
     # Assuming HR = 1 bps, check if half of the R peaks are detected
     if len(r_idx) < (len(ecg_detrend) / fs) / 2:
@@ -492,11 +668,14 @@ def extract_r(ecg_detrend, fs):
     return r_idx
 
 
-def extract_pqrst(ecg_detrend, r_idx, fs, diagPlot):
-    # Extract peaks from ECG data
-    #   peak_idx, peak_val = extract_pqrst(ecg_data, fs, diagPlot)
-    #   peak_idx, peak_val: N x 5 np array, index and value of peaks of PQRST
+def extract_pqrst(ecg_detrend, r_idx, fs=100, diagPlot=False):
+    ''' Extract peaks from ECG data
+        Based on results from extract_r, extract PQRST peaks
 
+        Returns
+        -------
+        peak_idx, peak_val: N x 5 numpy array, index and value of peaks of PQRST
+    '''
     p_idx, q_idx, s_idx, t_idx = [], [], [], []
     for i in range(len(r_idx)-1):
         idx_1 = int(r_idx[i] + (r_idx[i+1] - r_idx[i]) * 0.3)
