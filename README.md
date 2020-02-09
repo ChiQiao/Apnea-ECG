@@ -1,5 +1,5 @@
 # Sleep Apnea Detection
-![alt text](https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_cover.png "Sleep Apnea Detection")
+<p align="center"><img src="https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_cover.png" width="500" title="Sleep Apnea Detection"></p>
 Detect Sleep Apnea using heart rate measurements from wearable devices.
 
 # Project Overview
@@ -8,7 +8,7 @@ Over 18 million Americans suffer from Sleep Apnea, which leads to sleep deprivat
 The purpose of this app is to detect sleep apnea using signals from the heart rate measurement, so that wearable devices can provide early warning and direct people to sleep studies for diagnosis and treatment. 
 
 ## How to detect sleep apnea from heart rate measurements?
-![alt text](https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/Slide_HR_character.png=250x "Heart rate during apnea")
+<p align="center"><img src="https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/Slide_HR_character.png" width="350" title="Heart rate during apnea"></p>
 This figure shows a typical pattern of heart rate data during apnea. Due to the periodical breathing interruption, the heart rate fluctuates with a larger range at a specific frequency. As such, using features in the time and frequency domains, predictions can be made on whether the user is undergoing sleep apnea.
 
 ## How the prediction model is trained?
