@@ -580,7 +580,7 @@ def ecg_diagnose(apn):
         return 'C'
 
 
-def __detrend_data(data, window_size=200):
+def _detrend_data(data, window_size=200):
     weights = np.ones(window_size) / window_size
     ecg_trend = np.convolve(data, weights, mode='same')
     return data - ecg_trend
@@ -636,7 +636,7 @@ def get_heart_rate(ecg, fs=100):
         hr: numpy array
             Heart rate in beats per second, with the same size as t
     '''
-    ecg_detrend = __detrend_data(ecg)
+    ecg_detrend = _detrend_data(ecg)
     r_idx = extract_r(ecg_detrend, fs)
     t = r_idx[1: ] / fs
     hr = 1 / (np.diff(r_idx) / fs)

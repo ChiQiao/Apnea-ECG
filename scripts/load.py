@@ -31,7 +31,7 @@ def single_file_res(data_folder, file, apn, t_end):
     apn = apn[1: -1]  # Remove first and last APN label
 
     # ECG data (ecg)
-    ecg, _ = __get_ecg(str(Path(data_folder) / file))
+    ecg, _ = _get_ecg(str(Path(data_folder) / file))
     ecg = np.array(ecg).flatten()
     assert len(ecg) >= t_end * 100, 'Period of ecg shorter than label'
     ecg = ecg[: int(t_end * 100)]  # Discard the tail
@@ -39,7 +39,7 @@ def single_file_res(data_folder, file, apn, t_end):
     ecg = ecg[3000: -3000].reshape(len(apn), 6000)
 
     # QRS label
-    qrs, _, t_qrs = __get_qrs(str(Path(data_folder) / file))
+    qrs, _, t_qrs = _get_qrs(str(Path(data_folder) / file))
     qrs = np.array(qrs)
     qrs = qrs[t_qrs <= t_end]
     t_qrs = t_qrs[t_qrs <= t_end]
@@ -86,7 +86,7 @@ def get_apn_train(filename):
     return apn, t_apn
 
 
-def __get_ecg(filename):
+def _get_ecg(filename):
     # Method 2
     # signals, fields = wfdb.rdsamp(filename)
     record = wfdb.rdrecord(filename)
@@ -95,7 +95,7 @@ def __get_ecg(filename):
     return signal, fs
 
 
-def __get_qrs(filename):
+def _get_qrs(filename):
     annotation = wfdb.rdann(filename, extension='qrs')
     qrs = annotation.symbol
     fs = annotation.fs
@@ -103,7 +103,7 @@ def __get_qrs(filename):
     return qrs, fs, t
 
 
-def __get_additional_info(filename):
+def _get_additional_info(filename):
     try:
         record = wfdb.rdrecord(filename + 'r')
         signal = record.p_signal  # Resp C, Resp A, Resp N, SpO2
