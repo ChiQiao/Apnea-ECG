@@ -92,7 +92,7 @@ if from_sample:
     options = ('Sample 1', 'Sample 2', 'Sample 3')
     option = a.radio('', options, index=0)
     if option != 'Select one':
-        dict_data = {'Sample 1': 'c04', 'Sample 2': 'b09', 'Sample 3': 'a12'}
+        dict_data = {'Sample 1': 'c07', 'Sample 2': 'b09', 'Sample 3': 'a12'}
         # Load features
         features_df = load_sample_features(dict_data[option])
         # Load heart rate data
@@ -117,7 +117,7 @@ else:
 if show_result:
     with st.spinner('Generating diagnosis report...'):
         # Make prediction
-        y_pred = mdl.predict(scaler.transform(features_df[feature_col]))
+        y_pred = mdl.predict_proba(scaler.transform(features_df[feature_col]))[:, 1] > 0.61
         AI_max, apnea_total = apnea_diagnose(y_pred)
 
         # Plot minute-wise prediction
