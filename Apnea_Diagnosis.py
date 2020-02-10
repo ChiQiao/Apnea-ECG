@@ -92,7 +92,7 @@ if from_sample:
     options = ('Sample 1', 'Sample 2', 'Sample 3')
     option = a.radio('', options, index=0)
     if option != 'Select one':
-        dict_data = {'Sample 1': 'c07', 'Sample 2': 'b09', 'Sample 3': 'a12'}
+        dict_data = {'Sample 1': 'b09', 'Sample 2': 'c07', 'Sample 3': 'a12'}
         # Load features
         features_df = load_sample_features(dict_data[option])
         # Load heart rate data
