@@ -1,6 +1,6 @@
 # Sleep Apnea Detection
-<p align="center"><img src="https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_cover.png" width="700" title="Sleep Apnea Detection"></p>
 Detect Sleep Apnea using heart rate measurements from wearable devices.
+<p align="center"><img src="https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/icon_cover.png" width="700" title="Sleep Apnea Detection"></p>
 
 # Project Overview
 Over 18 million Americans suffer from Sleep Apnea, which leads to sleep deprivation, hypertension, heart diseases, and even stroke. Many people either are not aware of it (thinking that they just snore a lot) or are concerned about the cost and effort of a sleep study. 
@@ -19,4 +19,4 @@ Since most wearable devices do not track electrocardiogram, only the heart rate 
 ## Want to know more about this project?
 This is a personal project for the Insight Data Science program.  
 
-An [Oneline App](https://apnea-ecg.herokuapp.com/) is deployed on Heroku, where you can upload your own heart rate to evaluate sleep apnea, or using some sample data to see how it works. More information on feature engineering and performance evaluation can be found [here](https://docs.google.com/presentation/d/1WwZyvJ4VLjRcUPeKftsnVOTlXbZ1NYcIuLxvsKsN9ew/edit). 
+An [Oneline App](https://apnea-ecg.herokuapp.com/) is deployed on Heroku, where you can upload your own heart rate to evaluate sleep apnea, or using some sample data to see how it works. More information on feature engineering and performance evaluation can be found on the [Google Slides](https://docs.google.com/presentation/d/1WwZyvJ4VLjRcUPeKftsnVOTlXbZ1NYcIuLxvsKsN9ew/edit). 
