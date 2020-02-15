@@ -3,19 +3,19 @@ import pandas as pd
 import pickle
 import streamlit as st
 
-from scripts import plot
-from scripts.util import extract_features
+from notebooks import visualization
+from notebooks.feature_extractor import extract_features
 
 def load_model():
     with open('resources/model_logreg.pkl', 'rb') as f:
         res = pickle.load(f)
-    with open('features/feature_selection.pkl', 'rb') as f:
+    with open('data/feature/feature_selection.pkl', 'rb') as f:
         feature_col = pickle.load(f)
     return res['mdl'], res['scaler'], feature_col
 
 
 def load_sample_features(test_file):
-    test_df = pd.read_csv('features/' + test_file + '.csv')
+    test_df = pd.read_csv('data/feature/' + test_file + '.csv')
     test_df.drop(['apn', 'group', 'file'], axis=1, inplace=True)
     return test_df
 
@@ -96,7 +96,7 @@ if from_sample:
         # Load features
         features_df = load_sample_features(dict_data[option])
         # Load heart rate data
-        with open(f'HR_data/{dict_data[option]}.pkl', 'rb') as f:
+        with open(f'data/raw/{dict_data[option]}.pkl', 'rb') as f:
             hr_data = pickle.load(f)
         show_result = True
 else:
@@ -126,7 +126,7 @@ if show_result:
         st.markdown('''
             <font size="4">Apnea is first evluated for each minute based on the heart rate.</font>
             ''', unsafe_allow_html=True)
-        st.plotly_chart(plot.plot_hr(hr_data['t'], hr_data['hr'], y_pred))
+        st.plotly_chart(visualization.plot_hr(hr_data['t'], hr_data['hr'], y_pred))
 
         # Plot severity diagnosis
         st.header('')
@@ -135,6 +135,6 @@ if show_result:
             <font size="4">The severity is determined by: <br />1) the highest Apnea Index (apnea minutes per hour), and 
             <br />2) total minutes of apnea during the sleep.</font>
             ''', unsafe_allow_html=True)
-        st.plotly_chart(plot.plot_apnea_diagnosis(AI_max, apnea_total, y_pred), config={'displayModeBar': False, 'staticPlot': True})
-        st.plotly_chart(plot.plot_diagnosis_result(AI_max, apnea_total), config={'displayModeBar': False, 'staticPlot': True})
+        st.plotly_chart(visualization.plot_apnea_diagnosis(AI_max, apnea_total, y_pred), config={'displayModeBar': False, 'staticPlot': True})
+        st.plotly_chart(visualization.plot_diagnosis_result(AI_max, apnea_total), config={'displayModeBar': False, 'staticPlot': True})
 
