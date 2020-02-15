@@ -14,9 +14,10 @@ This figure shows a typical pattern of heart rate data during apnea. Due to the 
 ## How the prediction model is trained?
 The prediction model is trained using a [dataset](https://physionet.org/content/apnea-ecg/1.0.0/) on the PhysioNet, which provides the electrocardiogram recording of 70 participants during their sleep (~8 hours). The condition of these participants ranges from normal to severe apnea. The recording is paired with sleep apnea labels for each minute marked by experts. 
 
-Since most wearable devices do not track electrocardiogram, only the heart rate information is extracted to form the training dataset. A stratified cross-validation is performed to compare the prediction performance of Logistic Regression, Light GBM and Multilayer Perceptron using the same set of features. An end-to-end solution using pre-trained Convolutional Neural Networks and the wavelet spectrogram as input images is also tested. The overall accuracy is similar for these models (~80%), which means the features in the time and frequency domains convey most of the useful information. 
+Since most wearable devices do not track electrocardiograms, only the heart rate information is extracted to form the training dataset. Stratified cross-validation is performed to compare the prediction performance of Logistic Regression, Light GBM and Multilayer Perceptron using the same set of features. An end-to-end solution using pre-trained Convolutional Neural Networks and the wavelet spectrogram as input images is also tested. The overall accuracy is similar for these models (~80%), which means the features in the time and frequency domains convey most of the useful information. 
 
 ## Want to know more about this project?
 This is a personal project for the Insight Data Science program.  
 
-An [Oneline App](https://apnea-ecg.herokuapp.com/) is deployed on Heroku, where you can upload your own heart rate to evaluate sleep apnea, or using some sample data to see how it works. More information on feature engineering and performance evaluation can be found on the [Google Slides](https://docs.google.com/presentation/d/1WwZyvJ4VLjRcUPeKftsnVOTlXbZ1NYcIuLxvsKsN9ew/edit). 
+* [Heroku App](https://apnea-ecg.herokuapp.com/): Self-evaluation of sleep apnea using your own heart rate data.
+* [Google Slides](https://docs.google.com/presentation/d/1WwZyvJ4VLjRcUPeKftsnVOTlXbZ1NYcIuLxvsKsN9ew/edit): Demo slides for feature engineering and performance evaluation. 
