@@ -6,7 +6,7 @@ Over 18 million Americans suffer from Sleep Apnea, which leads to sleep deprivat
 
 The purpose of this app is to detect sleep apnea using signals from the heart rate measurement, so that wearable devices can provide early warning and direct people to sleep studies for diagnosis and treatment. 
 
-## Background: Sleep apnea and heart rate measurement
+## Background
 <p align="center"><img src="https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/Slide_HR_character.png" width="450" title="Heart rate during apnea"></p>
 This figure shows a typical pattern of heart rate data during apnea. Due to the periodical breathing interruption, the heart rate fluctuates with a larger range at a specific frequency. As such, using features in the time and frequency domains, predictions can be made on whether the user is undergoing sleep apnea.
 
