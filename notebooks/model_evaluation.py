@@ -6,6 +6,8 @@ from sklearn import preprocessing
 from sklearn.model_selection import StratifiedKFold
 from sklearn import metrics
 
+import util
+
 
 def model_evaluation_CV(
     mdl, df, file_df, feature_col, n=4, normalize=True, plot_roc=False
@@ -95,8 +97,8 @@ def model_evaluation_CV(
             X_val = scaler.transform(X_val) if normalize else X_val
             # Group prediction
             y_pred = mdl.predict(X_val)
-            group_res.loc[file, "pred"] = ecg_diagnose(y_pred)
-            group_res.loc[file, "true"] = ecg_diagnose(
+            group_res.loc[file, "pred"] = util.ecg_diagnose(y_pred)
+            group_res.loc[file, "true"] = util.ecg_diagnose(
                 y_val.values
             )  # Original group might be wrong (a10 is identified as B)
             # Minute-wise prediction probability
@@ -212,8 +214,8 @@ def model_evaluation_test(mdl, df, file_df, feature_col, scaler, thres):
         )
         # Group prediction
         y_pred = (mdl.predict_proba(X)[:, 1] > thres).astype(int)
-        group_res.loc[file, "pred"] = ecg_diagnose(y_pred)
-        group_res.loc[file, "true"] = ecg_diagnose(
+        group_res.loc[file, "pred"] = util.ecg_diagnose(y_pred)
+        group_res.loc[file, "true"] = util.ecg_diagnose(
             y.values
         )  # Original group might be wrong (a10 is identified as B)
         minute_res[file] = np.vstack((y, y_pred))
@@ -267,7 +269,7 @@ def eval_multiclass_auc(group_res, minute_res):
     for thres in thres_all:
         group_pred = np.array(
             [
-                ecg_diagnose(minute_res[patient][1, :] > thres)
+                util.ecg_diagnose(minute_res[patient][1, :] > thres)
                 for patient in group_res.index
             ]
         )

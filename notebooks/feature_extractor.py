@@ -126,7 +126,7 @@ def extract_features(data):
     return df
 
 
-def get_cwt(
+def extract_cwt(
     file,
     fs_new=1,
     smooth=True,
@@ -141,7 +141,7 @@ def get_cwt(
         Parameters
         ----------
         file: str
-            Name of the pkl file in the HR_data folder
+            Name of the pkl file in the data/raw folder
         fs_new: double
             Resampling frequency
         smooth: boolean
@@ -169,7 +169,7 @@ def get_cwt(
         group: str
             Severity group of the file (determined directly from file name)
     """
-    with open("../HR_data/" + file + ".pkl", "rb") as f:
+    with open("../data/raw/" + file + ".pkl", "rb") as f:
         data = pickle.load(f)
         apn = data["apn"]
         group = file[0].upper()
@@ -269,7 +269,7 @@ def smooth_hr(t_hr, hr):
     return t_hr, hr_smth
 
 
-def get_heart_rate(ecg, fs=100):
+def extract_heart_rate(ecg, fs=100):
     """ Calculate heart rate
 
         Parameters
