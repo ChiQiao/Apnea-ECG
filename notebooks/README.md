@@ -1,5 +1,5 @@
 # Data flow chart
-![Data flow chart](https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/Flow_chart.png)
+![Data flow chart](https://raw.githubusercontent.com/ChiQiao/Apnea-ECG/master/resources/Flow_chart_new.png)
 
 ## Notebooks
 **1_Data_prep** <br />Extract heart rate data from ECG; generate wavelet spectrogram images
